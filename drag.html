@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>拖拽</title>
+    <style type="text/css">
+        body, div, h2 {
+            margin: 0;
+            padding: 0;
+            font-family: "\5FAE\8F6F\96C5\9ED1", Helvetica, sans-serif;
+            font-size: 14px;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #box {
+            /* position: absolute;
+             top: 50%;
+             left: 50%;
+             margin: -150px 0 0 -150px;*/
+
+            /*position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            margin: auto;*/
+
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: #ffe470;
+        }
+
+        #box h2 {
+            padding: 0 20px;
+            height: 35px;
+            line-height: 35px;
+            background: #F9044E;
+            cursor: move;
+        }
+    </style>
+</head>
+<body>
+<div id="box">
+    <h2 id="boxTop">珠峰培训-登录</h2>
+</div>
+
+<script type="text/javascript">
+    //鼠标丢失问题:鼠标移动的速度过快，导致盒子和鼠标分开了，鼠标在盒子外触发onmouseup不能让盒子的onmouseup行为触发，导致盒子的move和up一直存在，当我们鼠标从新回到盒子上，不管按下还是不按下，是要鼠标动盒子也会跟着动...
+
+    //在IE浏览器和火狐浏览器中->我们用一根绳子把鼠标和盒子绑一起，不管你鼠标多块盒子也掉不下来->this.setCapture(在谷歌浏览器中不兼容)
+    //谷歌浏览器没有提供绳子的方法->我们把move和up绑定给document这个文档，这样不管你鼠标移动的多快，永远出不去整个文档，也就不存在丢失的问题了
+
+
+    //->使用JS实现让box在整个屏幕居中的位置
+    var winW = document.documentElement.clientWidth || document.body.clientWidth, winH = document.documentElement.clientHeight || document.body.clientHeight;
+    var box = document.getElementById("box"), boxTop = document.getElementById("boxTop");
+    var boxW = box.offsetWidth, boxH = box.offsetHeight;
+    box.style.left = (winW - boxW) / 2 + "px";
+    box.style.top = (winH - boxH) / 2 + "px";
+
+    //->实现拖拽
+    function down(e) {
+        //->给行为绑定方法
+        if (this.setCapture) {
+            this.setCapture();//->这个方法执行相当于用绳子把鼠标和绑定在一起了
+            this.onmousemove = move;
+            this.onmouseup = up;
+        } else {
+//            document.onmousemove = move;
+//            document.onmouseup = up;
+            //->直接这样绑定不行，因为此时move中的this变为了document,我们在move中获取的值应该是存储在boxTop上的,我们在move中在使用this的话，获取的是document上存储的值，但是document没有存储->我们还需要让move和up中的this依然指向boxTop才可以
+            var _this = this;
+            document.onmousemove = function (e) {
+                move.call(_this, e);
+            };
+            document.onmouseup = function (e) {
+                up.call(_this, e);
+            };
+        }
+        
+        //->记录初始位置
+        e = e || window.event;
+        this["mouseX"] = e.clientX;
+        this["mouseY"] = e.clientY;
+        this["boxL"] = parseFloat(box.style.left);
+        this["boxT"] = parseFloat(box.style.top);
+    }
+
+    function move(e) {
+        e = e || window.event;
+        //->计算鼠标偏移的值求出盒子当前的位置值
+        var spanX = e.clientX - this["mouseX"], spanY = e.clientY - this["mouseY"];
+        var curL = this["boxL"] + spanX, curT = this["boxT"] + spanY;
+        //->获取四个边界的值
+        var minT = 0, minL = 0, maxT = winH - boxH, maxL = winW - boxW;
+        //->边界判断
+        if (curL < minL) {
+            box.style.left = minL + "px";
+        } else if (curL > maxL) {
+            box.style.left = maxL + "px";
+        } else {
+            box.style.left = curL + "px";
+        }
+
+        if (curT < minT) {
+            box.style.top = minT + "px";
+        } else if (curT > maxT) {
+            box.style.top = maxT + "px";
+        } else {
+            box.style.top = curT + "px";
+        }
+    }
+
+    function up(e) {
+        //这块还需要把绳子解开
+        if (this.releaseCapture) {
+            this.releaseCapture();
+            this.onmousemove = null;
+            this.onmouseup = null;
+        } else {
+            document.onmousemove = null;
+            document.onmouseup = null;
+        }
+
+        this["mouseX"] = null;
+        this["mouseY"] = null;
+        this["boxL"] = null;
+        this["boxT"] = null;
+    }
+
+    boxTop.onmousedown = down;
+</script>
+</body>
+</html>
